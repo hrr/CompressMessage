@@ -7,6 +7,7 @@ using BizTalkComponents.Utils;
 using Microsoft.BizTalk.Component.Interop;
 using Microsoft.BizTalk.Message.Interop;
 using IComponent = Microsoft.BizTalk.Component.Interop.IComponent;
+using System.IO;
 
 namespace BizTalkComponents.PipelineComponents.CompressMessage
 {
@@ -39,16 +40,16 @@ namespace BizTalkComponents.PipelineComponents.CompressMessage
 
             using (var compressionUtil = new CompressionUtil())
             {
-                for (var i = 0; i < pInMsg.PartCount; i++)
+                var fileName = Path.GetFileNameWithoutExtension(outMsg.Context.Read("ReceivedFileName", "http://schemas.microsoft.com/BizTalk/2003/file-properties") as string);
+                if (String.Compare(fileName, string.Empty) == 0 || fileName == null)
                 {
-                    string partName;
-                    var part = pInMsg.GetPartByIndex(i, out partName);
-
-
-                    var fileName = GetFileName(part);
-
-                    compressionUtil.AddMessage(part.GetOriginalDataStream(), fileName);
+                    fileName = Guid.NewGuid().ToString();
                 }
+                string bodyPartName;
+                var xmlPart = pInMsg.GetPartByIndex(0, out bodyPartName);
+                var pdfPart = pInMsg.GetPartByIndex(1, out bodyPartName);
+                compressionUtil.AddMessage(xmlPart.GetOriginalDataStream(), String.Format("{0}.xml", fileName));
+                compressionUtil.AddMessage(pdfPart.GetOriginalDataStream(), String.Format("{0}.pdf", fileName));
 
                 bodyPart.Data = compressionUtil.GetZip();
                 pContext.ResourceTracker.AddResource(bodyPart.Data);
